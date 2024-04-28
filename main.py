@@ -10,10 +10,10 @@ class Snake(pygame.sprite.Sprite):
         self.x = x
         self.y = y
         self._r = 30
-        self.body_list = [('D',pygame.Rect(self.x, self.y, 30, 30)), \
-                          ('D',pygame.Rect(self.x, self.y - self._r, 30, 30)), \
-                          ('D',pygame.Rect(self.x, self.y - self._r * 2, 30, 30)), \
-                          ('D',pygame.Rect(self.x, self.y - self._r * 3, 30, 30))]
+        self.body_list = [['D', pygame.Rect(self.x, self.y, 30, 30)], \
+                          ['D', pygame.Rect(self.x, self.y - self._r, 30, 30)], \
+                          ['D', pygame.Rect(self.x, self.y - self._r * 2, 30, 30)], \
+                          ['D', pygame.Rect(self.x, self.y - self._r * 3, 30, 30)]]
 
     def move(self):
         if direction == 'L':
@@ -24,20 +24,13 @@ class Snake(pygame.sprite.Sprite):
             self.y -= shift
         elif direction == 'D':
             self.y += shift
-        self.body_list.insert(0, (direction, pygame.Rect(self.x, self.y, 30, 30)))
+        self.body_list.insert(0, [direction, pygame.Rect(self.x, self.y, 30, 30)])
+        self.body_list[1][0] = direction
         self.body_list.pop(-1)
         self.draw()
 
-
     def draw(self):
-        if self.body_list[0][0] == 'L':
-            screen.blit(snake_img_L, (self.body_list[0][1].x, self.body_list[0][1].y))
-        elif self.body_list[0][0] == 'R':
-            screen.blit(snake_img_R, (self.body_list[0][1].x, self.body_list[0][1].y))
-        elif self.body_list[0][0] == 'U':
-            screen.blit(snake_img_U, (self.body_list[0][1].x, self.body_list[0][1].y))
-        elif self.body_list[0][0] == 'D':
-            screen.blit(snake_img_D, (self.body_list[0][1].x, self.body_list[0][1].y))
+        # Отрисовка середины змейки
         for i in self.body_list[1:-1]:
             if i[0] == 'L':
                 screen.blit(snake_skill_L, (i[1].x, i[1].y))
@@ -47,6 +40,7 @@ class Snake(pygame.sprite.Sprite):
                 screen.blit(snake_skill_U, (i[1].x, i[1].y))
             elif i[0] == 'D':
                 screen.blit(snake_skill_U, (i[1].x, i[1].y))
+        # Отрисовка хвоста змейки
         if self.body_list[-1][0] == 'L':
             screen.blit(snake_tail_L, (self.body_list[-1][1].x, self.body_list[-1][1].y))
         elif self.body_list[-1][0] == 'R':
@@ -55,6 +49,15 @@ class Snake(pygame.sprite.Sprite):
             screen.blit(snake_tail_U, (self.body_list[-1][1].x, self.body_list[-1][1].y))
         elif self.body_list[-1][0] == 'D':
             screen.blit(snake_tail_D, (self.body_list[-1][1].x, self.body_list[-1][1].y))
+        # Отрисовка головы змейки
+        if self.body_list[0][0] == 'L':
+            screen.blit(snake_img_L, (self.body_list[0][1].x, self.body_list[0][1].y))
+        elif self.body_list[0][0] == 'R':
+            screen.blit(snake_img_R, (self.body_list[0][1].x, self.body_list[0][1].y))
+        elif self.body_list[0][0] == 'U':
+            screen.blit(snake_img_U, (self.body_list[0][1].x, self.body_list[0][1].y))
+        elif self.body_list[0][0] == 'D':
+            screen.blit(snake_img_D, (self.body_list[0][1].x, self.body_list[0][1].y))
 
 
 class Food(pygame.sprite.Sprite):
@@ -75,11 +78,13 @@ class Food(pygame.sprite.Sprite):
 
 pygame.init()
 pygame.mouse.set_visible(False)
-FPS = 1
+FPS = 60
 clock = pygame.time.Clock()
-
+screen_width, screen_height = 600, 600
 # Создание экрана
-screen = pygame.display.set_mode((600, 600))
+screen = pygame.display.set_mode((screen_width, screen_height))
+# Прямоугольник, представляющий границы экрана
+boundary_rect = pygame.Rect(30, 30, screen_width - 30, screen_height - 30)
 bg = pygame.image.load('image/field.jpg').convert()
 food_img = pygame.image.load('image/food1.png').convert_alpha()
 snake_img_L = pygame.image.load('image/snake_L.png').convert_alpha()
@@ -99,11 +104,11 @@ pygame.display.set_caption('Змейка')
 
 # Скорость движения
 shift = 30
-
-snake = Snake(0, 90)
+snake = Snake(screen_width // 2, screen_height // 2)
 direction = 'D'
-
 food = Food()
+takt = 0
+game_continues = True
 
 # Основной цикл программы
 running = True
@@ -124,23 +129,33 @@ while running:
     elif keys[pygame.K_DOWN]:
         direction = 'D'
 
-    # Проверка столкновения
-    collision = snake.body_list[0][1].colliderect(food.food_rect)
-    if collision:
-        food.update()
-        snake.body_list.append(snake.body_list[-1])
+    # Проверяем столкновение с границей экрана
 
-    # Очистка экрана
-    screen.blit(bg, (0, 0))
-    # Рисование snake и food
-    snake.move()
-    food.draw()
+    if not takt % 15:
+        game_continues = snake.body_list[0][1].colliderect(boundary_rect)
+
+        # Проверка столкновения
+        collision = snake.body_list[0][1].colliderect(food.food_rect)
+        if collision:
+            food.update()
+            snake.body_list.append(snake.body_list[-1])
+        if game_continues:
+            # Очистка экрана
+            screen.blit(bg, (0, 0))
+            # Рисование snake и food
+            food.draw()
+            snake.move()
+        else:
+            screen.fill((0, 0, 0))
+            pygame.display.set_caption('Игра окончена')
+
+
 
     # Обновление экрана
     pygame.display.flip()
 
     # Задержка для снижения скорости цикла
     clock.tick(FPS)
-
+    takt -= game_continues
 pygame.quit()
 sys.exit()
